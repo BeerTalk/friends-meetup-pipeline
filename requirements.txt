@@ -9,3 +9,5 @@ duckdb
 h3
 streamlit
 google-cloud-bigquery
+timezonefinder
+matplotlib
