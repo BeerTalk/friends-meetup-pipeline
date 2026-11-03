@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: stg_checkins
-    description: Clean check-ins, one row per user, venue and timestamp.
+    description: Clean Gowalla check-ins, one row per user, venue and timestamp.
     columns:
       - name: user_id
         data_tests: [not_null]
@@ -12,9 +12,9 @@ models:
         data_tests: [not_null]
 
   - name: stg_friendships
-    description: Friendships before and after the check-in period, one row per pair per snapshot.
+    description: Friendships, one row per pair with user_a < user_b.
     columns:
-      - name: snapshot
-        data_tests:
-          - accepted_values:
-              values: ["before", "after"]
+      - name: user_a
+        data_tests: [not_null]
+      - name: user_b
+        data_tests: [not_null]

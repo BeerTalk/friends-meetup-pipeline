@@ -3,14 +3,13 @@ select
     user_id,
     venue_id,
     ts_utc,
+    tz_name,
     tz_offset_min,
-    datetime(timestamp_add(ts_utc, interval tz_offset_min minute)) as ts_local,
+    datetime(ts_utc, tz_name) as ts_local,  -- time zone derived from coordinates in the Spark step
     lat,
     lon,
     st_geogpoint(lon, lat) as geo,  -- longitude first
-    h3_r9,
-    category,
-    country
+    h3_r9
 from {{ source('raw', 'checkins') }}
 where lat between -90 and 90
   and lon between -180 and 180

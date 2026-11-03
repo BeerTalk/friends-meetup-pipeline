@@ -1,6 +1,7 @@
 # Do friends who meet up stick around?
 
-Location data pipeline on Foursquare check-ins and friendships (LBSN2Vec++ dataset, CC BY 4.0).
+Location data pipeline on Gowalla check-ins and friendships (Stanford SNAP loc-gowalla dataset:
+about 6.4M check-ins from roughly 197k users, Feb 2009 to Oct 2010, plus the friendship network).
 Question: does meeting friends in person early on relate to retention, and could a "friends nearby"
 nudge help?
 

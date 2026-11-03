@@ -1,4 +1,4 @@
-"""Load cleaned check-ins and the friendship files into BigQuery (dataset: raw).
+"""Load cleaned Gowalla check-ins and the friendship network into BigQuery (dataset: raw).
 
 Needs two environment variables:
   BQ_PROJECT                      your Google Cloud project id
@@ -6,7 +6,6 @@ Needs two environment variables:
 Run from the repo root:  python scripts/load_to_bigquery.py
 """
 import os
-from pathlib import Path
 
 import pandas as pd
 import pyarrow.dataset as ds
@@ -14,11 +13,6 @@ from google.cloud import bigquery
 
 PROJECT = os.environ["BQ_PROJECT"]
 DATASET = os.environ.get("BQ_DATASET_RAW", "raw")
-RAW = Path("data/raw")
-FRIENDS = {
-    "friendships_before": RAW / "dataset_WWW_friendship_old.txt",
-    "friendships_after": RAW / "dataset_WWW_friendship_new.txt",
-}
 
 client = bigquery.Client(project=PROJECT)
 client.create_dataset(f"{PROJECT}.{DATASET}", exists_ok=True)
@@ -40,6 +34,7 @@ load(
     clustering_fields=["user_id"],
 )
 
-for table, path in FRIENDS.items():
-    friends = pd.read_csv(path, sep="\t", header=None, names=["user_a", "user_b"])
-    load(friends, table)
+friends = pd.read_csv(
+    "data/raw/loc-gowalla_edges.txt", sep="\t", header=None, names=["user_a", "user_b"]
+)
+load(friends, "friendships")

@@ -1,5 +1,5 @@
--- Fails if any friendship appears twice in the same snapshot.
-select user_a, user_b, snapshot, count(*) as n
+-- Fails if any friendship appears more than once.
+select user_a, user_b, count(*) as n
 from {{ ref('stg_friendships') }}
-group by 1, 2, 3
+group by 1, 2
 having count(*) > 1

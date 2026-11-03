@@ -10,5 +10,5 @@ sources:
             data_tests: [not_null]
           - name: ts_utc
             data_tests: [not_null]
-      - name: friendships_before
-      - name: friendships_after
+      - name: friendships
+        description: Gowalla friendship network; each pair appears in both directions.
