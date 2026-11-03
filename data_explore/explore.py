@@ -205,3 +205,60 @@ print(query_df("""
         from gaps
         where gap_min is not null
 """))
+#section 12
+section("12. Feasibility: friend meetups at the same venue within 60 minutes")
+
+# Put each check-in in an hour bucket, so we only compare check-ins close in time
+con.sql("""
+    create or replace table venue_hours as
+    select distinct user_id, venue_id, ts_utc,
+           cast(epoch(ts_utc) // 3600 as bigint) as hour_bucket
+    from checkins
+""")
+
+# Friends at the same venue within 60 minutes.
+# Each check-in is also copied into the hour before and after,
+# so 10:50 and 11:20 still match across the hour boundary.
+con.sql("""
+    create or replace table meetups as
+    with b_expanded as (
+        select v.user_id, v.venue_id, v.ts_utc, v.hour_bucket + o.k as hour_bucket
+        from venue_hours v
+        cross join (values (-1), (0), (1)) as o(k)
+    )
+    select distinct a.user_id as user_a, b.user_id as user_b, a.venue_id,
+           least(a.ts_utc, b.ts_utc) as met_at
+    from venue_hours a
+    join b_expanded b
+      on a.venue_id = b.venue_id
+     and a.hour_bucket = b.hour_bucket
+     and a.user_id < b.user_id
+     and abs(date_diff('minute', a.ts_utc, b.ts_utc)) <= 60
+    join edges e
+      on e.user_a = a.user_id
+     and e.user_b = b.user_id
+""")
+
+print(query_df("""
+    with active as (select distinct user_id from checkins),
+    active_pairs as (
+        select count(*) as n
+        from edges e
+        join active a1 on a1.user_id = e.user_a
+        join active a2 on a2.user_id = e.user_b
+        where e.user_a < e.user_b
+    ),
+    met_users as (
+        select user_a as user_id from meetups
+        union
+        select user_b from meetups
+    )
+    select (select count(*) from meetups) as meetup_events,
+           (select count(distinct (user_a, user_b)) from meetups) as friend_pairs_who_met,
+           (select n from active_pairs) as active_friend_pairs,
+           (select count(distinct (user_a, user_b)) from meetups)
+               / (select n from active_pairs) as share_of_pairs_who_met,
+           (select count(*) from met_users) as users_who_met,
+           (select count(*) from met_users) / (select count(*) from active) as share_of_users_who_met
+""").T)
+
