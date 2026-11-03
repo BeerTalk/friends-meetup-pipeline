@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: checkins
+        columns:
+          - name: user_id
+            data_tests: [not_null]
+          - name: ts_utc
+            data_tests: [not_null]
+      - name: friendships_before
+      - name: friendships_after

@@ -1,0 +1,11 @@
+dbt-bigquery
+dagster
+dagster-webserver
+dagster-dbt
+pyspark
+pyarrow
+pandas
+duckdb
+h3
+streamlit
+google-cloud-bigquery

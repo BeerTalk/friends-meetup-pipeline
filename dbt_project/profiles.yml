@@ -1,0 +1,12 @@
+# No secrets here: values come from environment variables.
+friends_meetup:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('BQ_PROJECT') }}"
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      dataset: analytics
+      location: US
+      threads: 4

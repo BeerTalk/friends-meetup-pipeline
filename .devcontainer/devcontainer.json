@@ -1,0 +1,15 @@
+{
+  "name": "friends-meetup-pipeline",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": { "version": "17" }
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
+  "remoteEnv": {
+    "DBT_PROFILES_DIR": "${containerWorkspaceFolder}/dbt_project"
+  },
+  "forwardPorts": [3000, 8501],
+  "customizations": {
+    "vscode": { "extensions": ["ms-python.python"] }
+  }
+}

@@ -1,0 +1,13 @@
+name: friends_meetup
+version: "1.0.0"
+profile: friends_meetup
+
+model-paths: ["models"]
+test-paths: ["tests"]
+
+models:
+  friends_meetup:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
