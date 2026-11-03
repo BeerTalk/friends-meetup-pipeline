@@ -119,10 +119,89 @@ ax.set_yscale("log")
 ax.set_title("check-ins per user (log scale)")
 ax.set_xlabel("checkins")
 ax.set_ylabel("users")
-save(fig,"checins_per_user_log10.png")
+save(fig,"2_checins_per_user_log10.png")
 
 #7 find the busiest areas
 con.sql("""
     create view checkins_area as 
-
+    SELECT *, cast(round(lat) as int) || ',' || cast(round(lon) as int) as area
+    FROM checkins
+    where not(lon = 0 and lat = 0)
 """)
+
+areas = query_df("""
+    SELECT area, count(*) as checkins, count(distinct(user_id)) as users
+    FROM checkins_area
+    group by 1
+    order by users desc
+    limit 10
+""")
+
+print(areas.to_string(index = False))
+top3 = areas['area'].head(3).tolist()
+
+#8 aggregate activities by time stamp
+section("8, Time stamp patterns by area (UTC)")
+hourly = query_df(f"""
+    SELECT area, hour(ts_utc) as hour_utc, count(*) as checkins
+    FROM checkins_area
+    WHERE area in ({", ".join(f" '{a}'" for a in top3)})
+    group by 1,2
+""")
+
+hourly['percent'] = hourly['checkins'] / hourly.groupby('area')['checkins'].transform("sum")
+
+
+fig,ax = plt.subplots(figsize = (9,4))
+
+for areas in top3:
+    row = hourly[hourly['area']==areas].sort_values("hour_utc")
+    ax.plot(row['hour_utc'], row['percent'], marker = 'o',label = areas)
+ax.set_title("Percent of check in s by hour, top 3 are in UTC")
+ax.set_xlabel("Hour UTC")
+ax.set_ylabel("Percent of area checkins")
+ax.set_xticks(range(0,24,2))
+ax.legend(title = "area(lat,lon)")
+save(fig, "3_hour_by_area.png")
+
+#9 check if coordinates move for the venue
+section("9. Venue coordinates consistency")
+print(query_df(""" 
+    SELECT count(*) as venues, count(*) filter(where lat_spread > 0.01 or lon_spread>0.01) as venues_moved
+    FROM( SELECT venue_id, max(lat) - min(lat) as lat_spread, max(lon)-min(lon) as lon_spread from checkins group by 1)
+"""))
+#10 lets check the relationsips https://snap.stanford.edu/data/loc-gowalla.html
+
+section ("10. Friendship check")
+print(query_df("""
+    SELECT  count(*) as directed_edges,
+            count(*) filter (where user_a < user_b) as unique_pairs,
+            count(*) filter(where user_a = user_b) as invalid_pairs,
+            count(*) filter(where not exists( SELECT 1 from edges r where r.user_a = e.user_b and r.user_b = e.user_a))
+            as edges_missing
+            FROM edges e
+"""))
+
+print(query_df("""
+    with active as (select distinct user_id from checkins),
+         friend_users as (select distinct user_a as user_id from edges)
+    select (select count(*) from active) as users_with_checkins,
+           (select count(*) from friend_users) as users_in_friend_graph,
+           (select count(*) from active join friend_users using (user_id)) as in_both
+"""))
+
+#11 time between checkins
+section("11. time between user's consecutive checkins in mins")
+print(query_df("""
+    with gaps as (
+        select date_diff('minute',
+                                lag(ts_utc) over (partition by user_id order by ts_utc), 
+                                ts_utc) as gap_min 
+                                from checkins)
+        select  quantile_cont(gap_min, 0.25) as percent_25,
+                quantile_cont(gap_min, 0.5) as median,
+                quantile_cont(gap_min, 0.9) as percent_90,
+                count(*) filter (where gap_min = 0) as same_time
+        from gaps
+        where gap_min is not null
+"""))
