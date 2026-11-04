@@ -1,40 +1,44 @@
-"""Load cleaned Gowalla check-ins and the friendship network into BigQuery (dataset: raw).
-
-Needs two environment variables:
-  BQ_PROJECT                      your Google Cloud project id
-  GOOGLE_APPLICATION_CREDENTIALS  path to a service account key file
-Run from the repo root:  python scripts/load_to_bigquery.py
-"""
+"""Load cleaned Gowalla checkins and the friendship network into BigQuery"""
 import os
-
 import pandas as pd
-import pyarrow.dataset as ds
 from google.cloud import bigquery
+from pathlib import Path
 
+#project id from google
 PROJECT = os.environ["BQ_PROJECT"]
-DATASET = os.environ.get("BQ_DATASET_RAW", "raw")
+DATASET = "raw"
 
-client = bigquery.Client(project=PROJECT)
-client.create_dataset(f"{PROJECT}.{DATASET}", exists_ok=True)
+#connect, create the dataset if it isnt there 
+client = bigquery.Client(project = PROJECT)
+client.create_dataset(f"{PROJECT}.{DATASET}", exists_ok = True)
 
+#instead of use pandas to read first then big query convert into another copy
+# just upload to sparks parquet directly, save memory
+files = sorted(Path("data/clean/checkins").glob("month=*/*.parquet"))
+print(f"Uploading {len(files)} parquet files")
+table_id = f"{PROJECT}.{DATASET}.checkins"
 
-def load(df: pd.DataFrame, table: str, **config) -> None:
-    job_config = bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE", **config)
-    job = client.load_table_from_dataframe(df, f"{PROJECT}.{DATASET}.{table}", job_config=job_config)
-    job.result()
-    print(f"{table}: {client.get_table(job.destination).num_rows:,} rows")
+for i,path in enumerate(files):
+    config = bigquery.LoadJobConfig(
+        source_format = bigquery.SourceFormat.PARQUET,
+        write_disposition = "WRITE_TRUNCATE" if i ==0 else "WRITE_APPEND",
+        time_partitioning = bigquery.TimePartitioning(field = "ts_utc"),
+        clustering_fields = ["user_id"]
+    )
+    with open(path, "rb") as f:
+        client.load_table_from_file(f,table_id, job_config = config ).result()
+    print(f"  {i + 1}/{len(files)} {path.parent.name}")
+print(f"checkins: {client.get_table(table_id).num_rows:,} rows")
+    
 
+# bigquery allows up to 10k paritions, use default day parition, we have about 600 days of data which makes sense tto partition by day
+# cluster by user cuz features are by user and filter on date typically
 
-checkins = ds.dataset("data/clean/checkins", format="parquet", partitioning="hive").to_table().to_pandas()
-checkins["month"] = checkins["month"].astype(str)
-load(
-    checkins,
-    "checkins",
-    time_partitioning=bigquery.TimePartitioning(field="ts_utc"),
-    clustering_fields=["user_id"],
-)
-
+#load friend
 friends = pd.read_csv(
-    "data/raw/loc-gowalla_edges.txt", sep="\t", header=None, names=["user_a", "user_b"]
+    "data/raw/loc-gowalla_edges.txt", sep = "\t", header = None, names = ["user_a", "user_b"]
 )
-load(friends, "friendships")
+friends_id = f"{PROJECT}.{DATASET}.friendships"
+config2 = bigquery.LoadJobConfig(write_disposition = "WRITE_TRUNCATE")
+client.load_table_from_dataframe(friends, friends_id, job_config = config2).result()
+print(f"friendships: {client.get_table(friends_id).num_rows:,} rows")
