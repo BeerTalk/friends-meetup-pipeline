@@ -14,6 +14,7 @@ RAW_CHECKINS = Path("data/raw/loc-gowalla_totalCheckins.txt")
 OUT = Path("data/clean/checkins")
 H3_RES = 9
 
+#utc, connect, local
 spark = (
     SparkSession.builder.appName("prepare_checkins")
     .config("spark.driver.memory", "6g")
@@ -21,8 +22,10 @@ spark = (
     .getOrCreate()
 )
 
+# no header data, assign
 raw = spark.read.csv(str(RAW_CHECKINS), sep="\t").toDF("user_id", "ts", "lat", "lon", "venue_id")
 
+#filter based on data explore finding, such as out of range coordinates 
 checkins = (
     raw.withColumn("user_id", F.col("user_id").cast("long"))
     .withColumn("venue_id", F.col("venue_id").cast("long"))
@@ -63,6 +66,9 @@ venues = (
     .select("venue_id", "tz_name", "h3_r9")
 )
 
+
+# step 1 checkins by venue first, only add new coordinates fo the venues that moved
+# find the timezone for each venue
 df = (
     checkins.join(venues, "venue_id")
     .withColumn("ts_local_ts", F.from_utc_timestamp("ts_utc", F.col("tz_name")))
@@ -76,6 +82,7 @@ df = (
 
 df.write.mode("overwrite").partitionBy("month").parquet(str(OUT))
 
+#process by partition, overwrite
 result = spark.read.parquet(str(OUT))
 print(f"Rows written: {result.count():,}")
 result.groupBy("month").count().orderBy("month").show(40)
