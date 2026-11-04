@@ -77,6 +77,35 @@ Fewer than 1,500 check-ins per month before September 2009, and the data stops o
 **7. Confirmed clean.**
 No null values in any column; no timestamps outside the documented period; only 12 of 1,280,969 venues change location by more than about 1 km.
 
+## Pipeline and engineering decisions
+
+### Row reconciliation
+
+Every step was checked against the one before it, so no rows were lost or duplicated along the way.
+
+| Stage | Check-ins | Friendship rows | Note |
+| --- | --- | --- | --- |
+| Raw files | 6,442,892 | 1,900,654 | Each friendship listed in both directions |
+| After Spark cleaning | 6,442,728 | 1,900,654 | 135 (0, 0) points and 29 out-of-range points removed |
+| Loaded into BigQuery | 6,442,728 | 1,900,654 | Matches exactly |
+
+The 601 duplicate check-ins are kept in the raw layer on purpose and removed in the dbt staging model, so the raw tables stay a faithful copy of the source.
+
+### Spark: clean, add local time and H3 cells
+
+- **Time zone and H3 cell are computed once per venue, not once per check-in:** 1.28M lookups instead of 6.44M, then joined back. This is safe because venue coordinates are stable (only 12 venues move by more than about 1 km).
+- **Vectorised (pandas) UDFs** for the time zone and H3 lookups, which process rows in batches rather than one at a time.
+- **Local time uses time zone names** (such as `Europe/Stockholm`), so daylight saving is handled correctly. Top zones by check-ins: America/Chicago (1.37M, covering Austin, Dallas and Chicago), America/New_York (1.03M), Europe/Stockholm (0.93M), America/Los_Angeles (0.91M).
+- **Output is Parquet, partitioned by month**, written with overwrite, so rerunning the job always produces the same result.
+
+### BigQuery: load and table design
+
+- **`raw.checkins` is partitioned by day on `ts_utc` and clustered by `user_id`.** Most queries filter on a time window and compute features per user, so this limits the data each query scans.
+- **Parquet files are uploaded directly to BigQuery.** Loading through pandas ran out of memory, because it held two full copies of 6.4M rows. Direct upload streams each file from disk and keeps the column types.
+- **The load is idempotent:** the first file replaces the table and the rest append. When a load was interrupted partway through, a rerun rebuilt the table cleanly with no manual cleanup.
+- **At larger scale:** stage the files in Cloud Storage and run a single wildcard load job, which is faster than 62 separate jobs and either fully succeeds or fully fails.
+
+
 ## Findings
 
 To do.
