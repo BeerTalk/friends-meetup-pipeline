@@ -52,3 +52,27 @@ models:
         description: Smallest gap in minutes between the two friends' check-ins.
       - name: checkins_pairs
         description: How many check-in pairs matched; more than 1 means repeated check-ins that day.
+
+  - name: user_retention
+    description: >
+      One row per user. Features from the first 30 days after their first check-in,
+      and whether they checked in again in days 30 to 60 (month-2 retention).
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+      - name: checkins_30_days
+        description: Check-ins in the first 30 days; every user has at least one.
+        data_tests: [not_null]
+      - name: days_active_30_days
+        description: Number of different days with a check-in in the first 30 days.
+      - name: activity_band
+        description: Early activity group, so users are compared with similarly active users.
+        data_tests:
+          - accepted_values:
+              values: ["1-4", "5-14", "15+"]
+      - name: met_friend_first_30d
+        description: True if the user met at least one friend in their first 30 days.
+      - name: eligible
+        description: True if the user joined at least 60 days before the data ends, so month-2 retention can be observed.
+      - name: retained_month_2
+        description: True if the user checked in at least once between day 30 and day 60.
