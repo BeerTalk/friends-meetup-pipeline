@@ -1,10 +1,10 @@
 version: 2
 
-models: 
+models:
   - name: fct_user_activity
     description: One row per user, lifetime activity summary.
     columns:
-      - name: user_iddbt build --select user_week_features
+      - name: user_id
         data_tests: [unique, not_null]
 
   - name: user_week_features
@@ -31,3 +31,24 @@ models:
         description: Share of the week's check-ins on Saturday or Sunday, local time.
       - name: radius_km
         description: Radius of gyration in km, how far the user roams from their weekly centre.
+
+  - name: meetups
+    description: >
+      One row per friend pair per venue per day where both friends checked in
+      within 60 minutes of each other. Dates are UTC.
+    columns:
+      - name: meetup_key
+        description: user_a, user_b, venue and date combined; unique if the grain holds.
+        data_tests: [unique, not_null]
+      - name: user_a
+        description: The friend with the smaller user_id.
+        data_tests: [not_null]
+      - name: user_b
+        description: The friend with the larger user_id.
+        data_tests: [not_null]
+      - name: met_at
+        description: Earliest time of the meetup that day, UTC.
+      - name: minutes_apart
+        description: Smallest gap in minutes between the two friends' check-ins.
+      - name: checkins_pairs
+        description: How many check-in pairs matched; more than 1 means repeated check-ins that day.
