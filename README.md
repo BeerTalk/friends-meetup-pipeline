@@ -99,7 +99,7 @@ The 601 duplicate check-ins are kept in the raw layer on purpose and removed in 
 - **Output is Parquet, partitioned by month**, written with overwrite, so rerunning the job always produces the same result.
 
 ### BigQuery: load and table design
-
+cd /workspaces/friends-meetup-pipeline/dbt_project
 - **Partition pruning, verified with a dry run:** selecting `ts_utc` for October 2010 scans 5,939,664 bytes, exactly 742,458 rows × 8 bytes, so only October's partitions are read. The same column across the whole table is 51,541,824 bytes, so the date filter reads about 88% less data.
 - **`raw.checkins` is partitioned by day on `ts_utc` and clustered by `user_id`.** Most queries filter on a time window and compute features per user, so this limits the data each query scans.
 - **Parquet files are uploaded directly to BigQuery.** Loading through pandas ran out of memory, because it held two full copies of 6.4M rows. Direct upload streams each file from disk and keeps the column types.

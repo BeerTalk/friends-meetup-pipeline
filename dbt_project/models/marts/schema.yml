@@ -1,0 +1,33 @@
+version: 2
+
+models: 
+  - name: fct_user_activity
+    description: One row per user, lifetime activity summary.
+    columns:
+      - name: user_iddbt build --select user_week_features
+        data_tests: [unique, not_null]
+
+  - name: user_week_features
+    description: >
+      One row per user per week (weeks start Monday, local time).
+      Weekly activity and movement features.
+    columns:
+      - name: user_week_key
+        description: user_id and week combined; unique if the grain holds.
+        data_tests: [unique, not_null]
+      - name: user_id
+        data_tests: [not_null]
+      - name: week
+        data_tests: [not_null]
+      - name: checkins
+        data_tests: [not_null]
+      - name: active_days
+        description: Number of different local dates with at least one check-in that week, 1 to 7.
+      - name: unique_venues
+        description: Number of different venues visited that week.
+      - name: unique_h3_r9
+        description: Number of different H3 resolution 9 cells visited, roughly how many separate places.
+      - name: weekend_ratio
+        description: Share of the week's check-ins on Saturday or Sunday, local time.
+      - name: radius_km
+        description: Radius of gyration in km, how far the user roams from their weekly centre.

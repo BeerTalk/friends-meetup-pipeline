@@ -10,3 +10,4 @@ friends_meetup:
       dataset: analytics
       location: US
       threads: 4
+      maximum_bytes_billed: 10000000000

@@ -1,13 +1,8 @@
 -- One row per real check-in: valid coordinates, deduplicated, with local time and a geography point.
 select
-    user_id,
-    venue_id,
-    ts_utc,
-    tz_name,
-    tz_offset_min,
+    user_id, venue_id, ts_utc, tz_name, tz_offset_min,
     datetime(ts_utc, tz_name) as ts_local,  -- time zone derived from coordinates in the Spark step
-    lat,
-    lon,
+    lat, lon,
     st_geogpoint(lon, lat) as geo,  -- longitude first
     h3_r9
 from {{ source('raw', 'checkins') }}

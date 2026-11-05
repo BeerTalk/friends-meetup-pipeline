@@ -1,3 +1,4 @@
+# Project settings: name, connection profile, and default materializations per folder
 name: friends_meetup
 version: "1.0.0"
 profile: friends_meetup
