@@ -109,7 +109,33 @@ cd /workspaces/friends-meetup-pipeline/dbt_project
 
 ## Findings
 
-To do.
+**Month-2 retention: did the user check in again between day 30 and day 60?** Features come from each user's first 30 days, so the outcome cannot leak into them. Users who joined in the last 60 days of data are excluded, because their month 2 cannot be observed (85,020 users included).
+
+| Early activity (first 30 days) | Did not meet a friend | Met a friend | Difference |
+| --- | --- | --- | --- |
+| 1 to 4 check-ins | 28.9% | 30.5% | +1.6 points |
+| 5 to 14 check-ins | 67.4% | 69.2% | +1.8 points |
+| 15+ check-ins | 85.3% | 89.1% | +3.8 points |
+
+- **Early activity is the strongest signal.** Retention rises from 29% to 67% to 85% across the activity bands.
+- **Meeting a friend adds a small, consistent lift of 2 to 4 points in every band.** It is clearly significant in the 15+ band (about 10 standard errors), probably real in 5 to 14, and too small to be sure in 1 to 4.
+- **Comparing within activity bands was essential.** Without bands, users who met a friend look 17 points better (about 77% versus 60%), because 63% of them are heavy users. Within bands the gap is 2 to 4 points, so the naive comparison overstates the effect about fivefold.
+- **Most meetups look like friends arriving together:** the median gap between the two check-ins is 3 minutes.
+
+**What this does not show:** this is correlation, not cause. Users who meet friends may differ in other ways, the sample contains only users with friends, and some meetups may be burst check-ins. A randomised test of a "friends nearby" nudge would be needed to measure its real effect.
+
+**Product implication:** a meetup nudge is unlikely to transform retention; the realistic upside is a few points, mostly among already engaged users. Improving early engagement looks like the bigger lever.
+
+### dbt models
+
+| Model | Grain | Rows | Key tests |
+| --- | --- | --- | --- |
+| `stg_checkins` | one check-in | 6,442,127 | no nulls in key columns; 601 duplicates removed |
+| `stg_friendships` | one friendship pair | 950,327 | each pair stored once |
+| `fct_user_activity` | one user | 107,092 | `user_id` unique |
+| `user_week_features` | one user per week | 978,900 | key unique; weekly totals add back to all check-ins |
+| `meetups` | one friend pair per venue per day | 206,447 | key unique; pairs stored smaller ID first |
+| `user_retention` | one user | 107,092 | one row per user; activity bands valid |
 
 ## What changes at 100x
 
