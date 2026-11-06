@@ -9,3 +9,6 @@ dbt_project/dbt_packages/
 .dagster_home/
 __pycache__/
 .ipynb_checkpoints/
+.venv/
+logs/
+.user.yml
