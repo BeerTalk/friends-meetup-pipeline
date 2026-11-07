@@ -11,3 +11,5 @@ streamlit
 google-cloud-bigquery
 timezonefinder
 matplotlib
+scikit-learn
+db-dtypes
